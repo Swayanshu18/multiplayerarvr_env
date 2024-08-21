@@ -11,7 +11,7 @@ using UnityEngine.EventSystems;
 using Photon.Pun;
 using Photon.Realtime;
 
-public class PlacementController : MonoBehaviourPunCallbacks
+public class SpherePlacementController : MonoBehaviourPunCallbacks
 {
     [SerializeField]
     private GameObject sphereFab;
@@ -37,10 +37,15 @@ public class PlacementController : MonoBehaviourPunCallbacks
     [SerializeField]
     private UnityEngine.UI.Button offButton;
 
+   
+    [SerializeField]
+    private Material sphereMaterial;
+
     // Constants
-    private float fetchedScaleValue = 1f; // Scale
-    private string url = "https://10.5.20.123/val";
-    private float fetchInterval = 1f; // Sec
+    private float fetchedScaleValue = 1f; 
+    private Color fetchedColor = Color.white; 
+    private string url = "https://192.168.38.154/val";
+    private float fetchInterval = 1f; 
 
     private ARRaycastManager arRaycastManager;
     private static List<ARRaycastHit> hits = new List<ARRaycastHit>();
@@ -68,9 +73,10 @@ public class PlacementController : MonoBehaviourPunCallbacks
 
     void Update()
     {
-        if (!PhotonNetwork.InRoom) return; // Ensure we're in a room before allowing placements
+        Debug.Log(fetchedScaleValue.ToString());
+        if (!PhotonNetwork.InRoom) return; 
 
-        // Object Placement Logic
+      
         if (Input.touchCount > 0 && !inputPanel.activeSelf && !onoffPanel.activeSelf)
         {
             var touch = Input.GetTouch(0);
@@ -96,12 +102,19 @@ public class PlacementController : MonoBehaviourPunCallbacks
                         GameObject newSphere = PhotonNetwork.Instantiate(sphereFab.name, hitPose.position, hitPose.rotation);
                         newSphere.GetComponent<sphereBehavior>().createTag().setLoc(hitPose.position).setScale(fetchedScaleValue).getstr();
                         placedSpheres.Add(newSphere);
+
+                        
+                        if (newSphere.GetComponent<Renderer>() != null && sphereMaterial != null)
+                        {
+                            newSphere.GetComponent<Renderer>().material = sphereMaterial;
+                            newSphere.GetComponent<Renderer>().material.color = fetchedColor;
+                        }
                     }
                 }
             }
         }
 
-        // Object Interaction Logic
+       
         Ray ray = Camera.main.ScreenPointToRay(new Vector3(Screen.width / 2, Screen.height / 2, 0));
 
         if (Physics.Raycast(ray, out RaycastHit hitInfo, 1.0f))
@@ -193,6 +206,8 @@ public class PlacementController : MonoBehaviourPunCallbacks
                         string jsonResponse = webRequest.downloadHandler.text;
                         ResponseData responseData = JsonUtility.FromJson<ResponseData>(jsonResponse);
                         fetchedScaleValue = responseData.value;
+                       
+                        fetchedColor = ColorUtility.TryParseHtmlString(responseData.color, out Color color) ? color : Color.white;
                     }
                     catch (Exception e)
                     {
@@ -217,6 +232,7 @@ public class PlacementController : MonoBehaviourPunCallbacks
     private class ResponseData
     {
         public float value;
+        public string color; // Added for color
     }
 
     private void changeColor(Button btn, UnityEngine.Color newColor)
@@ -234,7 +250,7 @@ public class PlacementController : MonoBehaviourPunCallbacks
         if (!PhotonNetwork.IsConnected)
         {
             PhotonNetwork.ConnectUsingSettings();
-            PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion = "eu"; // Adjust as needed
+            PhotonNetwork.PhotonServerSettings.AppSettings.FixedRegion = "eu"; 
         }
     }
 
